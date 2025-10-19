@@ -8,7 +8,10 @@ from config import settings
 from models import SentryIssue, IncidentStatus
 from integrations.sentry_client import SentryClient
 from integrations.rag import RAGSystem
-if settings.use_real_mcp:
+# Choose agent implementation based on configuration
+if settings.use_autonomous_agent:
+    from agent.autonomous_agent import AutonomousMCPAgent as MCPIncidentAgent
+elif settings.use_real_mcp:
     from agent.mcp_workflow import RealMCPIncidentAgent as MCPIncidentAgent
 else:
     from agent.workflow import MCPIncidentAgent

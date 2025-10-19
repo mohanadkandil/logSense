@@ -8,7 +8,7 @@ instead of direct function imports.
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from typing import TypedDict, List, Dict, Any, Callable, Optional
 from datetime import datetime
 import json
