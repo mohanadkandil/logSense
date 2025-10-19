@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Clean Light Theme Palette */
+  /* Gray Scale */
   --color-white: #ffffff;
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
@@ -14,40 +14,43 @@
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
 
-  /* Modern Accent Colors */
-  --color-blue-50: #eff6ff;
+  --color-mint-light: #DEF5EE;
+  --color-mint-dark: #8EE4C9;
+  --color-mint-500: #10b981;
+  --color-mint-600: #059669;
+
+  --color-purple-light: #ECE3FF;
+  --color-purple-dark: #9665FF;
+  --color-purple-500: #8b5cf6;
+  --color-purple-600: #7c3aed;
+
+  --color-blue-light: #E7EFFF;
+  --color-blue-dark: #76A1FB;
   --color-blue-500: #3b82f6;
   --color-blue-600: #2563eb;
-  --color-blue-700: #1d4ed8;
 
-  --color-indigo-50: #eef2ff;
-  --color-indigo-500: #6366f1;
-  --color-indigo-600: #4f46e5;
+  --color-yellow-light: #FFEFA4;
+  --color-yellow-dark: #FFDD40;
+  --color-yellow-500: #f59e0b;
+  --color-yellow-600: #d97706;
 
-  --color-purple-50: #faf5ff;
-  --color-purple-500: #a855f7;
-  --color-purple-600: #9333ea;
+  /* Additional Colors */
+  --color-pink-50: #fce7f3;
+  --color-pink-500: #ec4899;
+  --color-pink-600: #db2777;
 
-  --color-emerald-50: #ecfdf5;
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
-
-  --color-orange-50: #fff7ed;
-  --color-orange-500: #f97316;
-  --color-orange-600: #ea580c;
-
-  --color-red-50: #fef2f2;
+  --color-red-50: #fee2e2;
   --color-red-500: #ef4444;
   --color-red-600: #dc2626;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  /* Clean Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Global Styles - Clean Light Theme */
+/* Global Foundation */
 * {
   box-sizing: border-box;
 }
@@ -56,231 +59,157 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: var(--color-gray-50);
+  background: #ffffff;
   color: var(--color-gray-900);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Card Styles */
+/* Clean Cards */
 .card {
-  background: var(--color-white);
+  background: #ffffff;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-node {
+  background: #ffffff;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+  transition: box-shadow 0.2s ease;
+}
+
+.card-node:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-node-mini {
+  background: #ffffff;
   border: 1px solid var(--color-gray-200);
   border-radius: 12px;
   box-shadow: var(--shadow-sm);
+  padding: 12px 16px;
+  transition: box-shadow 0.2s ease;
 }
 
-.card-elevated {
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-200);
-  border-radius: 16px;
-  box-shadow: var(--shadow-lg);
+.card-node-mini:hover {
+  box-shadow: var(--shadow);
 }
 
-/* Modern Button Styles */
-.btn-primary {
-  background: var(--color-blue-600);
-  color: white;
-  border: 1px solid var(--color-blue-600);
-  border-radius: 8px;
-  font-weight: 500;
+/* Icon Containers */
+.icon-container-mint {
+  background-color: var(--color-mint-light);
+}
+
+.icon-container-purple {
+  background-color: var(--color-purple-light);
+}
+
+.icon-container-blue {
+  background-color: var(--color-blue-light);
+}
+
+.icon-container-yellow {
+  background-color: var(--color-yellow-light);
+}
+
+.icon-container-pink {
+  background-color: var(--color-pink-50);
+}
+
+/* Buttons */
+.btn-gradient-mint {
+  background: var(--color-mint-light);
+  color: var(--color-mint-600);
+  border: 1px solid var(--color-mint-dark);
+  border-radius: 12px;
+  font-weight: 600;
   transition: all 0.2s ease;
 }
 
-.btn-primary:hover {
-  background: var(--color-blue-700);
-  border-color: var(--color-blue-700);
-  box-shadow: var(--shadow-md);
+.btn-gradient-mint:hover {
+  background: var(--color-mint-dark);
+  color: white;
+}
+
+.btn-gradient-purple {
+  background: var(--color-purple-light);
+  color: var(--color-purple-600);
+  border: 1px solid var(--color-purple-dark);
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-gradient-purple:hover {
+  background: var(--color-purple-dark);
+  color: white;
+}
+
+.btn-gradient-blue {
+  background: var(--color-blue-light);
+  color: var(--color-blue-600);
+  border: 1px solid var(--color-blue-dark);
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-gradient-blue:hover {
+  background: var(--color-blue-dark);
+  color: white;
+}
+
+.btn-gradient-yellow {
+  background: var(--color-yellow-light);
+  color: var(--color-yellow-600);
+  border: 1px solid var(--color-yellow-dark);
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-gradient-yellow:hover {
+  background: var(--color-yellow-dark);
+  color: var(--color-gray-800);
 }
 
 .btn-secondary {
   background: var(--color-gray-100);
   color: var(--color-gray-700);
-  border: 1px solid var(--color-gray-300);
-  border-radius: 8px;
-  font-weight: 500;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 12px;
+  font-weight: 600;
   transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
   background: var(--color-gray-200);
-  border-color: var(--color-gray-400);
-  box-shadow: var(--shadow-sm);
+  color: var(--color-gray-800);
 }
 
-.btn-success {
-  background: var(--color-emerald-600);
-  color: white;
-  border: 1px solid var(--color-emerald-600);
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
+/* Utilities */
+.mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", "Consolas", "Liberation Mono", "Menlo", monospace;
 }
 
-.btn-success:hover {
-  background: var(--color-emerald-700);
-  border-color: var(--color-emerald-700);
-  box-shadow: var(--shadow-md);
+.shadow-soft {
+  box-shadow: var(--shadow);
 }
 
-.btn-warning {
-  background: var(--color-orange-500);
-  color: white;
-  border: 1px solid var(--color-orange-500);
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn-warning:hover {
-  background: var(--color-orange-600);
-  border-color: var(--color-orange-600);
-  box-shadow: var(--shadow-md);
-}
-
-.btn-danger {
-  background: var(--color-red-500);
-  color: white;
-  border: 1px solid var(--color-red-500);
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn-danger:hover {
-  background: var(--color-red-600);
-  border-color: var(--color-red-600);
-  box-shadow: var(--shadow-md);
-}
-
-.btn-purple {
-  background: var(--color-purple-600);
-  color: white;
-  border: 1px solid var(--color-purple-600);
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn-purple:hover {
-  background: var(--color-purple-700);
-  border-color: var(--color-purple-700);
-  box-shadow: var(--shadow-md);
-}
-
-/* Status Badges */
-.badge-critical {
-  background: var(--color-red-50);
-  color: var(--color-red-700);
-  border: 1px solid var(--color-red-200);
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-}
-
-.badge-warning {
-  background: var(--color-orange-50);
-  color: var(--color-orange-700);
-  border: 1px solid var(--color-orange-200);
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-}
-
-.badge-success {
-  background: var(--color-emerald-50);
-  color: var(--color-emerald-700);
-  border: 1px solid var(--color-emerald-200);
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-}
-
-.badge-info {
-  background: var(--color-blue-50);
-  color: var(--color-blue-700);
-  border: 1px solid var(--color-blue-200);
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-}
-
-.badge-purple {
-  background: var(--color-purple-50);
-  color: var(--color-purple-700);
-  border: 1px solid var(--color-purple-200);
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-}
-
-/* Hover Effects */
 .hover-lift {
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
 .hover-lift:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-/* Monospace Typography */
-.mono {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Menlo', monospace;
-  font-weight: 500;
-}
-
-/* Beautiful Scrollbars */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--color-gray-100);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-gray-300);
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-400);
-}
-
-/* Form Elements */
-input, textarea, select {
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-300);
-  border-radius: 8px;
-  color: var(--color-gray-900);
-  transition: all 0.2s ease;
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--color-blue-500);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* Loading States */
-.skeleton {
-  background: linear-gradient(90deg, var(--color-gray-200) 25%, var(--color-gray-100) 50%, var(--color-gray-200) 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-  border-radius: 4px;
-}
-
-@keyframes loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
 }

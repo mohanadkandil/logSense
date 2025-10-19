@@ -16,23 +16,26 @@ interface IncidentCardProps {
 const severityConfig = {
   critical: {
     icon: XCircle,
-    color: "text-red-600",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
+    color: "text-pink-600",
+    container: "icon-container-pink",
+    bgColor: "bg-gradient-to-r from-pink-50 to-red-50",
+    borderColor: "border-pink-200",
     label: "CRITICAL",
   },
   error: {
     icon: AlertCircle,
-    color: "text-red-500",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
+    color: "text-pink-500",
+    container: "icon-container-pink",
+    bgColor: "bg-gradient-to-r from-pink-50 to-red-50",
+    borderColor: "border-pink-200",
     label: "ERROR",
   },
   warning: {
     icon: AlertTriangle,
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-    borderColor: "border-orange-200",
+    color: "text-yellow-600",
+    container: "icon-container-yellow",
+    bgColor: "bg-gradient-to-r from-yellow-50 to-orange-50",
+    borderColor: "border-yellow-200",
     label: "WARNING",
   },
 }
@@ -40,21 +43,24 @@ const severityConfig = {
 const statusConfig = {
   analyzing: {
     text: "AI Analyzing",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
+    color: "text-purple-700",
+    bgColor: "bg-gradient-to-r from-purple-50 to-indigo-50",
     borderColor: "border-purple-200",
+    container: "icon-container-purple",
   },
   investigating: {
     text: "Investigating",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
+    color: "text-blue-700",
+    bgColor: "bg-gradient-to-r from-blue-50 to-cyan-50",
     borderColor: "border-blue-200",
+    container: "icon-container-blue",
   },
   resolved: {
     text: "Resolved",
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50",
-    borderColor: "border-emerald-200",
+    color: "text-mint-700",
+    bgColor: "bg-gradient-to-r from-mint-50 to-emerald-50",
+    borderColor: "border-mint-200",
+    container: "icon-container-mint",
   },
 }
 
@@ -69,7 +75,7 @@ export function IncidentCard(props: IncidentCardProps) {
       <div className="flex items-start justify-between">
         {/* Left Side - Incident Info */}
         <div className="flex items-start gap-3 flex-1">
-          <div className={cn("p-2 rounded-lg", severityConfig[props.severity].bgColor)}>
+          <div className={cn("p-2 rounded-lg", severityConfig[props.severity].container)}>
             <SeverityIcon className={cn("h-4 w-4", severityConfig[props.severity].color)} />
           </div>
           <div className="flex-1 min-w-0">

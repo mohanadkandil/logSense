@@ -13,26 +13,26 @@ interface StatsCardProps {
 
 const colorClasses = {
   critical: {
-    bg: "bg-red-100",
-    text: "text-red-600"
+    container: "icon-container-pink",
+    text: "text-pink-600"
   },
   success: {
-    bg: "bg-emerald-100",
-    text: "text-emerald-600"
+    container: "icon-container-mint",
+    text: "text-mint-600"
   },
   info: {
-    bg: "bg-blue-100",
+    container: "icon-container-blue",
     text: "text-blue-600"
   },
   warning: {
-    bg: "bg-orange-100",
-    text: "text-orange-600"
+    container: "icon-container-yellow",
+    text: "text-yellow-600"
   },
 }
 
 export function StatsCard({ title, value, change, changeType, icon: Icon, color, description }: StatsCardProps) {
   return (
-    <div className="card p-6 hover-lift">
+    <div className="card p-6">
       <div className="flex items-start justify-between">
         <div className="space-y-3 flex-1">
           <div className="flex items-center gap-2">
@@ -68,8 +68,8 @@ export function StatsCard({ title, value, change, changeType, icon: Icon, color,
           </div>
         </div>
 
-        <div className={cn("p-3 rounded-xl", colorClasses[color].bg, colorClasses[color].text)}>
-          <Icon className="h-6 w-6" />
+        <div className={cn("p-3 rounded-xl", colorClasses[color].container)}>
+          <Icon className={cn("h-6 w-6", colorClasses[color].text)} />
         </div>
       </div>
     </div>

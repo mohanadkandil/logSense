@@ -29,11 +29,11 @@ export function SystemHealthChart() {
   const [timeRange, setTimeRange] = useState("24h")
 
   return (
-    <div className="card-elevated p-6">
+    <div className="card p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-100 rounded-lg">
-            <Activity className="h-5 w-5 text-emerald-600" />
+          <div className="icon-container-mint p-2 rounded-lg">
+            <Activity className="h-5 w-5 text-mint-600" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">System Health</h2>

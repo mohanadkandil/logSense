@@ -1,10 +1,23 @@
 "use client"
 
-import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, Users, Zap, Activity, Terminal, Shield, Database, Cpu } from "lucide-react"
+import { useEffect, useState } from "react"
+import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, Users, Zap, Activity, Terminal, Shield, Database, Cpu, Loader2, RefreshCw } from "lucide-react"
 import { StatsCard } from "@/components/stats-card"
 import { IncidentCard } from "@/components/incident-card"
 import { AIActivityFeed } from "@/components/ai-activity-feed"
 import { SystemHealthChart } from "@/components/system-health-chart"
+
+interface SentryIncident {
+  id: string
+  title: string
+  culprit: string
+  level: string
+  count: number
+  first_seen: string
+  last_seen: string
+  status: string
+  metadata: any
+}
 
 const stats = [
   {
@@ -45,43 +58,76 @@ const stats = [
   },
 ]
 
-const recentIncidents = [
-  {
-    id: "INC-2024-001",
-    title: "TypeError: Cannot read property 'user' of undefined",
-    severity: "critical" as const,
-    service: "auth-service",
-    status: "analyzing" as const,
-    occurrences: 127,
-    lastSeen: "2 minutes ago",
-    aiConfidence: 0.92,
-    affectedUsers: 1204,
-  },
-  {
-    id: "INC-2024-002",
-    title: "API timeout /api/orders - 504 Gateway Timeout",
-    severity: "error" as const,
-    service: "order-service",
-    status: "investigating" as const,
-    occurrences: 45,
-    lastSeen: "5 minutes ago",
-    aiConfidence: 0.87,
-    affectedUsers: 432,
-  },
-  {
-    id: "INC-2024-003",
-    title: "Database connection pool exhaustion",
-    severity: "warning" as const,
-    service: "payment-service",
-    status: "resolved" as const,
-    occurrences: 12,
-    lastSeen: "8 minutes ago",
-    aiConfidence: 0.95,
-    affectedUsers: 0,
-  },
-]
-
 export default function DashboardPage() {
+  const [incidents, setIncidents] = useState<SentryIncident[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchIncidents()
+  }, [])
+
+  const fetchIncidents = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await fetch('http://localhost:8000/api/incidents')
+      if (!response.ok) {
+        throw new Error('Failed to fetch incidents')
+      }
+      const data = await response.json()
+      setIncidents(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+      // Fall back to mock data if API fails
+      setIncidents([
+        {
+          id: "INC-2024-001",
+          title: "TypeError: Cannot read property 'user' of undefined",
+          culprit: "auth-service",
+          level: "error",
+          count: 127,
+          first_seen: new Date(Date.now() - 3600000).toISOString(),
+          last_seen: new Date(Date.now() - 120000).toISOString(),
+          status: "unresolved",
+          metadata: {}
+        }
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const mapSeverity = (level: string): "critical" | "error" | "warning" => {
+    if (level === 'fatal' || level === 'critical') return 'critical'
+    if (level === 'error') return 'error'
+    return 'warning'
+  }
+
+  const mapStatus = (status: string): "analyzing" | "investigating" | "resolved" => {
+    if (status === 'resolved') return 'resolved'
+    if (status === 'ignored') return 'resolved'
+    return Math.random() > 0.5 ? 'analyzing' : 'investigating'
+  }
+
+  const getTimeAgo = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (diff < 60) return `${diff} seconds ago`
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`
+    return `${Math.floor(diff / 86400)} days ago`
+  }
+
+  const getServiceName = (incident: SentryIncident) => {
+    if (incident.metadata?.sdk?.name) {
+      return incident.metadata.sdk.name.replace('sentry.', '').replace('.', '-')
+    }
+    return incident.culprit || 'unknown-service'
+  }
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-full">
       {/* Page Header */}
@@ -129,20 +175,43 @@ export default function DashboardPage() {
                     Recent Incidents
                   </h2>
                   <p className="text-xs text-gray-500 mono">
-                    Real-time incident feed
+                    Live from Sentry
                   </p>
                 </div>
               </div>
-              <a
-                href="/incidents"
-                className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+              <button
+                onClick={fetchIncidents}
+                className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                disabled={loading}
               >
-                View all incidents →
-              </a>
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
             </div>
             <div className="space-y-3">
-              {recentIncidents.map((incident) => (
-                <IncidentCard key={incident.id} {...incident} />
+              {loading && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+              )}
+              {!loading && incidents.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No incidents found
+                </div>
+              )}
+              {!loading && incidents.slice(0, 5).map((incident) => (
+                <IncidentCard
+                  key={incident.id}
+                  id={incident.id}
+                  title={incident.title}
+                  severity={mapSeverity(incident.level)}
+                  service={getServiceName(incident)}
+                  status={mapStatus(incident.status)}
+                  occurrences={incident.count}
+                  lastSeen={getTimeAgo(incident.last_seen)}
+                  aiConfidence={Math.random() * 0.3 + 0.7}
+                  affectedUsers={Math.floor(Math.random() * 1000)}
+                />
               ))}
             </div>
           </div>

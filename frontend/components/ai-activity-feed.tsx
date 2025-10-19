@@ -60,12 +60,12 @@ export function AIActivityFeed() {
   }, [])
 
   return (
-    <div className="card-elevated h-full">
+    <div className="card h-full">
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Brain className="h-5 w-5 text-blue-600" />
+            <div className="icon-container-purple p-2 rounded-lg">
+              <Brain className="h-5 w-5 text-purple-600" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">AI Agent Activity</h2>
