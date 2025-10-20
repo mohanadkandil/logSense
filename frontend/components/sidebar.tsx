@@ -2,12 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState, useEffect } from "react"
 import {
   LayoutDashboard,
   AlertCircle,
   Brain,
-  BarChart3,
-  Settings,
   Activity,
   Zap,
   Shield,
@@ -20,18 +19,57 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Incidents", href: "/incidents", icon: AlertCircle },
   { name: "AI Analysis", href: "/ai-analysis", icon: Brain },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Settings", href: "/settings", icon: Settings },
-]
-
-const statusItems = [
-  { name: "Active Monitors", count: 42, icon: Activity, color: "text-red-600" },
-  { name: "AI Agents", count: 3, icon: Zap, color: "text-blue-600" },
-  { name: "Learned Issues", count: 127, icon: Shield, color: "text-purple-600" },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const [stats, setStats] = useState({
+    activeIncidents: 0,
+    totalAnalyses: 0,
+    resolvedToday: 0
+  })
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Fetch real incident counts
+        const incidentsResponse = await fetch('http://localhost:8000/api/incidents?limit=100')
+        const incidents = incidentsResponse.ok ? await incidentsResponse.json() : []
+
+        // Fetch real analysis counts
+        const analysesResponse = await fetch('http://localhost:8000/api/analyses?limit=100')
+        const analyses = analysesResponse.ok ? await analysesResponse.json() : []
+
+        // Filter real analyses (not test ones)
+        const realAnalyses = analyses.filter(a => a.issue_id !== 'test-123')
+
+        // Count resolved today (analyses with high confidence)
+        const today = new Date().toDateString()
+        const resolvedToday = realAnalyses.filter(a =>
+          new Date(a.created_at).toDateString() === today && a.confidence >= 0.8
+        ).length
+
+        setStats({
+          activeIncidents: incidents.length || 0,
+          totalAnalyses: realAnalyses.length || 0,
+          resolvedToday: resolvedToday || 0
+        })
+      } catch (error) {
+        console.error('Failed to fetch sidebar stats:', error)
+      }
+    }
+
+    fetchStats()
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchStats, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const statusItems = [
+    { name: "Active Incidents", count: stats.activeIncidents, icon: Activity, color: "text-red-600" },
+    { name: "AI Analyses", count: stats.totalAnalyses, icon: Brain, color: "text-blue-600" },
+    { name: "Resolved Today", count: stats.resolvedToday, icon: Shield, color: "text-purple-600" },
+  ]
 
   return (
     <div className="hidden md:flex md:w-64 md:flex-col">

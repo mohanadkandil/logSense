@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Analysis {
+  id                String         @id @default(cuid())
+  issueId           String         @map("issue_id")
+  errorMessage      String         @map("error_message")
+  rootCause         String?        @map("root_cause")
+  confidence        Float?
+  suggestedFixes    String?        @map("suggested_fixes") // JSON string
+  similarIncidents  String?        @map("similar_incidents") // JSON string
+  durationSeconds   Float?         @map("duration_seconds")
+  status            String         @default("completed")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  steps             AnalysisStep[]
+
+  @@map("analyses")
+}
+
+model AnalysisStep {
+  id          String   @id @default(cuid())
+  analysisId  String?  @map("analysis_id")
+  step        String
+  tool        String?
+  output      String
+  timestamp   DateTime
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  analysis    Analysis? @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@map("analysis_steps")
+}

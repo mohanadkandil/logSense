@@ -8,6 +8,7 @@ from config import settings
 from models import SentryIssue, IncidentStatus
 from integrations.sentry_client import SentryClient
 from integrations.rag import RAGSystem
+from database import db_service
 # Choose agent implementation based on configuration
 if settings.use_autonomous_agent:
     from agent.autonomous_agent import AutonomousMCPAgent as MCPIncidentAgent
@@ -119,6 +120,73 @@ async def get_incident_details(issue_id: str):
         raise HTTPException(
             status_code=404, 
             detail=f"Issue not found: {str(e)}"
+        )
+
+
+@app.get("/api/analyses")
+async def get_analyses(limit: int = 20):
+    """
+    Get list of recent analyses.
+
+    Args:
+        limit: Maximum number of analyses to return (default: 20)
+
+    Returns:
+        List of analysis objects
+    """
+    try:
+        analyses = await db_service.list_analyses(limit=limit)
+        return analyses
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch analyses: {str(e)}"
+        )
+
+
+@app.get("/api/analyses/{analysis_id}")
+async def get_analysis(analysis_id: str):
+    """
+    Get detailed analysis by ID.
+
+    Args:
+        analysis_id: Analysis ID
+
+    Returns:
+        Analysis object with steps
+    """
+    try:
+        analysis = await db_service.get_analysis(analysis_id)
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Analysis not found")
+        return analysis
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch analysis: {str(e)}"
+        )
+
+
+@app.get("/api/incidents/{issue_id}/analysis")
+async def get_incident_analysis(issue_id: str):
+    """
+    Get most recent analysis for an incident.
+
+    Args:
+        issue_id: Sentry issue ID
+
+    Returns:
+        Analysis object if found, 404 if not
+    """
+    try:
+        analysis = await db_service.get_analysis_by_issue(issue_id)
+        if not analysis:
+            raise HTTPException(status_code=404, detail="No analysis found for this incident")
+        return analysis
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch incident analysis: {str(e)}"
         )
 
 

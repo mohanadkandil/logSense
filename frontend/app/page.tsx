@@ -6,6 +6,7 @@ import { StatsCard } from "@/components/stats-card"
 import { IncidentCard } from "@/components/incident-card"
 import { AIActivityFeed } from "@/components/ai-activity-feed"
 import { SystemHealthChart } from "@/components/system-health-chart"
+import { useWebSocket } from "@/hooks/useWebSocket"
 
 interface SentryIncident {
   id: string
@@ -19,53 +20,161 @@ interface SentryIncident {
   metadata: any
 }
 
-const stats = [
-  {
-    title: "Active Incidents",
-    value: "42",
-    change: "-8",
-    changeType: "decrease" as const,
-    icon: AlertTriangle,
-    color: "critical" as const,
-    description: "Critical issues requiring attention",
-  },
-  {
-    title: "MTTR",
-    value: "5.2m",
-    change: "-2.1m",
-    changeType: "decrease" as const,
-    icon: Clock,
-    color: "success" as const,
-    description: "Mean time to resolution",
-  },
-  {
-    title: "Resolution Rate",
-    value: "89%",
-    change: "+5%",
-    changeType: "increase" as const,
-    icon: CheckCircle,
-    color: "success" as const,
-    description: "Successfully resolved incidents",
-  },
-  {
-    title: "AI Learned",
-    value: "127",
-    change: "+23",
-    changeType: "increase" as const,
-    icon: Shield,
-    color: "info" as const,
-    description: "Knowledge base entries",
-  },
-]
-
 export default function DashboardPage() {
   const [incidents, setIncidents] = useState<SentryIncident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedIncident, setSelectedIncident] = useState<SentryIncident | null>(null)
+  const [systemStats, setSystemStats] = useState({
+    totalIncidents: 0,
+    criticalIncidents: 0,
+    avgConfidence: 0,
+    highConfidenceAnalyses: 0,
+    analysesToday: 0,
+    knowledgeBaseSize: 0
+  })
+  const [stats, setStats] = useState([
+    {
+      title: "Active Incidents",
+      value: "0",
+      change: "",
+      changeType: "neutral" as const,
+      icon: AlertTriangle,
+      color: "critical" as const,
+      description: "Critical issues requiring attention",
+    },
+    {
+      title: "AI Analyses",
+      value: "0",
+      change: "",
+      changeType: "neutral" as const,
+      icon: Shield,
+      color: "info" as const,
+      description: "Total investigations completed",
+    },
+    {
+      title: "Avg Confidence",
+      value: "0%",
+      change: "",
+      changeType: "neutral" as const,
+      icon: CheckCircle,
+      color: "success" as const,
+      description: "AI analysis confidence score",
+    },
+    {
+      title: "Resolved Today",
+      value: "0",
+      change: "",
+      changeType: "neutral" as const,
+      icon: Clock,
+      color: "success" as const,
+      description: "High-confidence resolutions today",
+    },
+  ])
+
+  // WebSocket for AI analysis
+  const {
+    isConnected,
+    isAnalyzing,
+    steps,
+    result,
+    error: analysisError,
+    startAnalysis,
+    clearAnalysis
+  } = useWebSocket()
 
   useEffect(() => {
     fetchIncidents()
+    fetchStats()
   }, [])
+
+  const fetchStats = async () => {
+    try {
+      // Fetch incidents and analyses
+      const [incidentsRes, analysesRes] = await Promise.all([
+        fetch('http://localhost:8000/api/incidents?limit=100'),
+        fetch('http://localhost:8000/api/analyses?limit=100')
+      ])
+
+      const incidents = incidentsRes.ok ? await incidentsRes.json() : []
+      const analyses = analysesRes.ok ? await analysesRes.json() : []
+
+      // Filter real analyses (not test ones)
+      const realAnalyses = analyses.filter(a => a.issue_id !== 'test-123')
+
+      // Calculate stats
+      const activeIncidents = incidents.length
+      const totalAnalyses = realAnalyses.length
+      const avgConfidence = realAnalyses.length > 0
+        ? Math.round((realAnalyses.reduce((sum, a) => sum + a.confidence, 0) / realAnalyses.length) * 100)
+        : 0
+
+      // Count resolved today (high confidence analyses)
+      const today = new Date().toDateString()
+      const resolvedToday = realAnalyses.filter(a =>
+        new Date(a.created_at).toDateString() === today && a.confidence >= 0.8
+      ).length
+
+      // Additional system stats
+      const criticalIncidents = incidents.filter(i => i.level === 'error' || i.level === 'fatal').length
+      const highConfidenceAnalyses = realAnalyses.filter(a => a.confidence >= 0.8).length
+      const analysesToday = realAnalyses.filter(a =>
+        new Date(a.created_at).toDateString() === today
+      ).length
+
+      // Update system stats
+      setSystemStats({
+        totalIncidents: activeIncidents,
+        criticalIncidents,
+        avgConfidence,
+        highConfidenceAnalyses,
+        analysesToday,
+        knowledgeBaseSize: realAnalyses.length
+      })
+
+      // Update stats with real data
+      setStats([
+        {
+          title: "Active Incidents",
+          value: activeIncidents.toString(),
+          change: "",
+          changeType: "neutral" as const,
+          icon: AlertTriangle,
+          color: "critical" as const,
+          description: "Critical issues requiring attention",
+        },
+        {
+          title: "AI Analyses",
+          value: totalAnalyses.toString(),
+          change: "",
+          changeType: "neutral" as const,
+          icon: Shield,
+          color: "info" as const,
+          description: "Total investigations completed",
+        },
+        {
+          title: "Avg Confidence",
+          value: `${avgConfidence}%`,
+          change: "",
+          changeType: "neutral" as const,
+          icon: CheckCircle,
+          color: "success" as const,
+          description: "AI analysis confidence score",
+        },
+        {
+          title: "Resolved Today",
+          value: resolvedToday.toString(),
+          change: "",
+          changeType: "neutral" as const,
+          icon: Clock,
+          color: "success" as const,
+          description: "High-confidence resolutions today",
+        },
+      ])
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+    }
+  }
 
   const fetchIncidents = async () => {
     setLoading(true)
@@ -79,20 +188,7 @@ export default function DashboardPage() {
       setIncidents(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
-      // Fall back to mock data if API fails
-      setIncidents([
-        {
-          id: "INC-2024-001",
-          title: "TypeError: Cannot read property 'user' of undefined",
-          culprit: "auth-service",
-          level: "error",
-          count: 127,
-          first_seen: new Date(Date.now() - 3600000).toISOString(),
-          last_seen: new Date(Date.now() - 120000).toISOString(),
-          status: "unresolved",
-          metadata: {}
-        }
-      ])
+      setIncidents([])
     } finally {
       setLoading(false)
     }
@@ -128,6 +224,29 @@ export default function DashboardPage() {
     return incident.culprit || 'unknown-service'
   }
 
+  const handleStartAnalysis = () => {
+    if (isAnalyzing) return
+
+    // Use the first available incident for analysis
+    const incident = selectedIncident || incidents[0]
+    if (!incident) {
+      alert('No incidents available for analysis')
+      return
+    }
+
+    console.log('Starting analysis for incident:', incident.id, incident.title)
+    setSelectedIncident(incident)
+    startAnalysis(incident.id, incident.title)
+  }
+
+  const handleIncidentClick = (incident: SentryIncident) => {
+    if (isAnalyzing) return
+
+    console.log('Selecting incident for analysis:', incident.id, incident.title)
+    setSelectedIncident(incident)
+    startAnalysis(incident.id, incident.title)
+  }
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-full">
       {/* Page Header */}
@@ -141,13 +260,45 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Connection Status */}
+          <div className="flex items-center gap-2 text-xs">
+            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-300'}`} />
+            <span className="text-gray-500 mono">
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
+
+          {/* Clear Analysis Button */}
+          {(steps.length > 0 || result) && (
+            <button
+              onClick={clearAnalysis}
+              className="btn-secondary px-3 py-2 flex items-center gap-2 text-xs"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Clear
+            </button>
+          )}
+
           <button className="btn-secondary px-4 py-2 flex items-center gap-2 text-sm">
             <Terminal className="h-4 w-4" />
             Export Report
           </button>
-          <button className="btn-primary px-4 py-2 flex items-center gap-2 text-sm">
-            <Zap className="h-4 w-4" />
-            Start AI Investigation
+          <button
+            onClick={handleStartAnalysis}
+            disabled={isAnalyzing || incidents.length === 0}
+            className="btn-gradient-blue px-4 py-2 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Zap className="h-4 w-4" />
+                Start AI Investigation
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -200,18 +351,27 @@ export default function DashboardPage() {
                 </div>
               )}
               {!loading && incidents.slice(0, 5).map((incident) => (
-                <IncidentCard
+                <div
                   key={incident.id}
-                  id={incident.id}
-                  title={incident.title}
-                  severity={mapSeverity(incident.level)}
-                  service={getServiceName(incident)}
-                  status={mapStatus(incident.status)}
-                  occurrences={incident.count}
-                  lastSeen={getTimeAgo(incident.last_seen)}
-                  aiConfidence={Math.random() * 0.3 + 0.7}
-                  affectedUsers={Math.floor(Math.random() * 1000)}
-                />
+                  onClick={() => handleIncidentClick(incident)}
+                  className={`cursor-pointer transition-all duration-200 ${
+                    selectedIncident?.id === incident.id
+                      ? 'ring-2 ring-blue-500 ring-offset-2'
+                      : ''
+                  } ${isAnalyzing ? 'pointer-events-none opacity-50' : 'hover:scale-[1.02]'}`}
+                >
+                  <IncidentCard
+                    id={incident.id}
+                    title={incident.title}
+                    severity={mapSeverity(incident.level)}
+                    service={getServiceName(incident)}
+                    status={mapStatus(incident.status)}
+                    occurrences={incident.count}
+                    lastSeen={getTimeAgo(incident.last_seen)}
+                    aiConfidence={Math.random() * 0.3 + 0.7}
+                    affectedUsers={Math.floor(Math.random() * 1000)}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -222,79 +382,84 @@ export default function DashboardPage() {
 
         {/* AI Activity Feed - Takes 1 column */}
         <div className="lg:col-span-1">
-          <AIActivityFeed />
+          <AIActivityFeed
+            steps={steps}
+            isAnalyzing={isAnalyzing}
+            error={analysisError}
+            result={result}
+          />
         </div>
       </div>
 
       {/* System Overview Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Services Status */}
+        {/* Incident Status */}
         <div className="card p-6">
           <div className="flex items-center gap-3 mb-4">
-            <Database className="h-5 w-5 text-blue-600" />
+            <AlertTriangle className="h-5 w-5 text-red-600" />
             <h3 className="font-semibold text-gray-900">
-              Services
+              Incident Status
             </h3>
           </div>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">
-                Healthy
+                Total Active
               </span>
-              <span className="text-sm font-bold text-emerald-600 mono">
-                24/27
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Degraded
-              </span>
-              <span className="text-sm font-bold text-orange-600 mono">
-                2/27
+              <span className="text-sm font-bold text-blue-600 mono">
+                {systemStats.totalIncidents}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">
-                Down
+                Critical/Error
               </span>
               <span className="text-sm font-bold text-red-600 mono">
-                1/27
+                {systemStats.criticalIncidents}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">
+                Non-Critical
+              </span>
+              <span className="text-sm font-bold text-emerald-600 mono">
+                {systemStats.totalIncidents - systemStats.criticalIncidents}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Performance Metrics */}
+        {/* Analysis Performance */}
         <div className="card p-6">
           <div className="flex items-center gap-3 mb-4">
             <Cpu className="h-5 w-5 text-purple-600" />
             <h3 className="font-semibold text-gray-900">
-              Performance
+              Analysis Performance
             </h3>
           </div>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">
-                Avg Response
+                Avg Confidence
               </span>
               <span className="text-sm font-bold text-emerald-600 mono">
-                142ms
+                {systemStats.avgConfidence}%
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">
-                Error Rate
-              </span>
-              <span className="text-sm font-bold text-orange-600 mono">
-                0.12%
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Throughput
+                High Confidence
               </span>
               <span className="text-sm font-bold text-blue-600 mono">
-                2.4k/min
+                {systemStats.highConfidenceAnalyses}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">
+                Analyzed Today
+              </span>
+              <span className="text-sm font-bold text-purple-600 mono">
+                {systemStats.analysesToday}
               </span>
             </div>
           </div>
@@ -305,32 +470,32 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3 mb-4">
             <Zap className="h-5 w-5 text-blue-600" />
             <h3 className="font-semibold text-gray-900">
-              AI Insights
+              AI Knowledge
             </h3>
           </div>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">
-                Auto-resolved
+                Knowledge Base
               </span>
               <span className="text-sm font-bold text-emerald-600 mono">
-                23 today
+                {systemStats.knowledgeBaseSize} entries
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">
-                Predictions
+                Confidence Rate
               </span>
               <span className="text-sm font-bold text-purple-600 mono">
-                94% acc
+                {systemStats.knowledgeBaseSize > 0 ? Math.round((systemStats.highConfidenceAnalyses / systemStats.knowledgeBaseSize) * 100) : 0}%
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">
-                Learning
+                Status
               </span>
               <span className="text-sm font-bold text-blue-600 mono">
-                Active
+                {systemStats.knowledgeBaseSize > 0 ? 'Learning' : 'Idle'}
               </span>
             </div>
           </div>

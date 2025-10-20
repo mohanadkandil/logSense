@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # MCP Configuration
-    use_real_mcp: bool = True # Set to True to use real MCP server-client communication
+    use_real_mcp: bool = False # Set to True to use real MCP server-client communication
     use_autonomous_agent: bool = False  # Set to True for LLM-driven tool selection
     
     class Config:
