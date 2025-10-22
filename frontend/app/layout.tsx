@@ -1,34 +1,55 @@
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Sidebar } from "@/components/sidebar"
-import { Header } from "@/components/header"
+"use client";
 
-const inter = Inter({ subsets: ["latin"] })
-
-export const metadata: Metadata = {
-  title: "LogSense - AI-Powered Incident Intelligence",
-  description: "Real-time monitoring and AI-powered analysis of system incidents",
-}
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { Sidebar } from "@/components/sidebar";
+import { Header } from "@/components/header";
+import { usePathname } from "next/navigation";
+import {
+  ClerkProvider,
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isAppRoute = pathname.startsWith("/app");
+
+  if (!isAppRoute) {
+    // Landing page and other public routes
+    return (
+      <ClerkProvider>
+        <html lang="en">
+          <body className={inter.className} suppressHydrationWarning={true}>
+            {children}
+          </body>
+        </html>
+      </ClerkProvider>
+    );
+  }
+
+  // App routes with sidebar and header
   return (
-    <html lang="en">
-      <body className={inter.className} suppressHydrationWarning={true}>
-        <div className="flex h-screen bg-white">
-          <Sidebar />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Header />
-            <main className="flex-1 overflow-y-auto">
-              {children}
-            </main>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={inter.className} suppressHydrationWarning={true}>
+          <div className="flex h-screen bg-white">
+            <Sidebar />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <Header />
+              <main className="flex-1 overflow-y-auto">{children}</main>
+            </div>
           </div>
-        </div>
-      </body>
-    </html>
-  )
+        </body>
+      </html>
+    </ClerkProvider>
+  );
 }

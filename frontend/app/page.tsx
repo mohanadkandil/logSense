@@ -1,506 +1,283 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Clock, Users, Zap, Activity, Terminal, Shield, Database, Cpu, Loader2, RefreshCw } from "lucide-react"
-import { StatsCard } from "@/components/stats-card"
-import { IncidentCard } from "@/components/incident-card"
-import { AIActivityFeed } from "@/components/ai-activity-feed"
-import { SystemHealthChart } from "@/components/system-health-chart"
-import { useWebSocket } from "@/hooks/useWebSocket"
+import { useState } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { Instrument_Serif } from "next/font/google";
 
-interface SentryIncident {
-  id: string
-  title: string
-  culprit: string
-  level: string
-  count: number
-  first_seen: string
-  last_seen: string
-  status: string
-  metadata: any
-}
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: ["400"],
+});
+import {
+  Brain,
+  Zap,
+  Shield,
+  TrendingUp,
+  CheckCircle,
+  ArrowRight,
+  Sparkles,
+  Code2,
+  GitBranch,
+  Timer,
+  BarChart3,
+  Users,
+  Layers,
+  Cpu,
+  Globe,
+  Lock,
+  Star,
+  Play,
+  Monitor,
+  Activity,
+  Lightbulb,
+} from "lucide-react";
 
-export default function DashboardPage() {
-  const [incidents, setIncidents] = useState<SentryIncident[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedIncident, setSelectedIncident] = useState<SentryIncident | null>(null)
-  const [systemStats, setSystemStats] = useState({
-    totalIncidents: 0,
-    criticalIncidents: 0,
-    avgConfidence: 0,
-    highConfidenceAnalyses: 0,
-    analysesToday: 0,
-    knowledgeBaseSize: 0
-  })
-  const [stats, setStats] = useState([
-    {
-      title: "Active Incidents",
-      value: "0",
-      change: "",
-      changeType: "neutral" as const,
-      icon: AlertTriangle,
-      color: "critical" as const,
-      description: "Critical issues requiring attention",
-    },
-    {
-      title: "AI Analyses",
-      value: "0",
-      change: "",
-      changeType: "neutral" as const,
-      icon: Shield,
-      color: "info" as const,
-      description: "Total investigations completed",
-    },
-    {
-      title: "Avg Confidence",
-      value: "0%",
-      change: "",
-      changeType: "neutral" as const,
-      icon: CheckCircle,
-      color: "success" as const,
-      description: "AI analysis confidence score",
-    },
-    {
-      title: "Resolved Today",
-      value: "0",
-      change: "",
-      changeType: "neutral" as const,
-      icon: Clock,
-      color: "success" as const,
-      description: "High-confidence resolutions today",
-    },
-  ])
-
-  // WebSocket for AI analysis
-  const {
-    isConnected,
-    isAnalyzing,
-    steps,
-    result,
-    error: analysisError,
-    startAnalysis,
-    clearAnalysis
-  } = useWebSocket()
-
-  useEffect(() => {
-    fetchIncidents()
-    fetchStats()
-  }, [])
-
-  const fetchStats = async () => {
-    try {
-      // Fetch incidents and analyses
-      const [incidentsRes, analysesRes] = await Promise.all([
-        fetch('http://localhost:8000/api/incidents?limit=100'),
-        fetch('http://localhost:8000/api/analyses?limit=100')
-      ])
-
-      const incidents = incidentsRes.ok ? await incidentsRes.json() : []
-      const analyses = analysesRes.ok ? await analysesRes.json() : []
-
-      // Filter real analyses (not test ones)
-      const realAnalyses = analyses.filter(a => a.issue_id !== 'test-123')
-
-      // Calculate stats
-      const activeIncidents = incidents.length
-      const totalAnalyses = realAnalyses.length
-      const avgConfidence = realAnalyses.length > 0
-        ? Math.round((realAnalyses.reduce((sum, a) => sum + a.confidence, 0) / realAnalyses.length) * 100)
-        : 0
-
-      // Count resolved today (high confidence analyses)
-      const today = new Date().toDateString()
-      const resolvedToday = realAnalyses.filter(a =>
-        new Date(a.created_at).toDateString() === today && a.confidence >= 0.8
-      ).length
-
-      // Additional system stats
-      const criticalIncidents = incidents.filter(i => i.level === 'error' || i.level === 'fatal').length
-      const highConfidenceAnalyses = realAnalyses.filter(a => a.confidence >= 0.8).length
-      const analysesToday = realAnalyses.filter(a =>
-        new Date(a.created_at).toDateString() === today
-      ).length
-
-      // Update system stats
-      setSystemStats({
-        totalIncidents: activeIncidents,
-        criticalIncidents,
-        avgConfidence,
-        highConfidenceAnalyses,
-        analysesToday,
-        knowledgeBaseSize: realAnalyses.length
-      })
-
-      // Update stats with real data
-      setStats([
-        {
-          title: "Active Incidents",
-          value: activeIncidents.toString(),
-          change: "",
-          changeType: "neutral" as const,
-          icon: AlertTriangle,
-          color: "critical" as const,
-          description: "Critical issues requiring attention",
-        },
-        {
-          title: "AI Analyses",
-          value: totalAnalyses.toString(),
-          change: "",
-          changeType: "neutral" as const,
-          icon: Shield,
-          color: "info" as const,
-          description: "Total investigations completed",
-        },
-        {
-          title: "Avg Confidence",
-          value: `${avgConfidence}%`,
-          change: "",
-          changeType: "neutral" as const,
-          icon: CheckCircle,
-          color: "success" as const,
-          description: "AI analysis confidence score",
-        },
-        {
-          title: "Resolved Today",
-          value: resolvedToday.toString(),
-          change: "",
-          changeType: "neutral" as const,
-          icon: Clock,
-          color: "success" as const,
-          description: "High-confidence resolutions today",
-        },
-      ])
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
-    }
-  }
-
-  const fetchIncidents = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await fetch('http://localhost:8000/api/incidents')
-      if (!response.ok) {
-        throw new Error('Failed to fetch incidents')
-      }
-      const data = await response.json()
-      setIncidents(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
-      setIncidents([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const mapSeverity = (level: string): "critical" | "error" | "warning" => {
-    if (level === 'fatal' || level === 'critical') return 'critical'
-    if (level === 'error') return 'error'
-    return 'warning'
-  }
-
-  const mapStatus = (status: string): "analyzing" | "investigating" | "resolved" => {
-    if (status === 'resolved') return 'resolved'
-    if (status === 'ignored') return 'resolved'
-    return Math.random() > 0.5 ? 'analyzing' : 'investigating'
-  }
-
-  const getTimeAgo = (timestamp: string) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-    if (diff < 60) return `${diff} seconds ago`
-    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`
-    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`
-    return `${Math.floor(diff / 86400)} days ago`
-  }
-
-  const getServiceName = (incident: SentryIncident) => {
-    if (incident.metadata?.sdk?.name) {
-      return incident.metadata.sdk.name.replace('sentry.', '').replace('.', '-')
-    }
-    return incident.culprit || 'unknown-service'
-  }
-
-  const handleStartAnalysis = () => {
-    if (isAnalyzing) return
-
-    // Use the first available incident for analysis
-    const incident = selectedIncident || incidents[0]
-    if (!incident) {
-      alert('No incidents available for analysis')
-      return
-    }
-
-    console.log('Starting analysis for incident:', incident.id, incident.title)
-    setSelectedIncident(incident)
-    startAnalysis(incident.id, incident.title)
-  }
-
-  const handleIncidentClick = (incident: SentryIncident) => {
-    if (isAnalyzing) return
-
-    console.log('Selecting incident for analysis:', incident.id, incident.title)
-    setSelectedIncident(incident)
-    startAnalysis(incident.id, incident.title)
-  }
+export default function LandingPage() {
+  const [email, setEmail] = useState("");
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-full">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Dashboard
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Real-time monitoring and AI-powered incident intelligence
-          </p>
+    <div className="min-h-screen bg-white">
+      {/* Beautiful gradient background inspired by Plumb */}
+      <div className="fixed inset-0 bg-gradient-to-br from-orange-200/30 via-purple-200/20 to-green-200/30">
+        <div className="absolute inset-0 bg-gradient-to-tr from-pink-100/20 via-transparent to-blue-100/20" />
+      </div>
+
+      {/* Hero Section - full screen stunning experience */}
+      <section className="relative min-h-screen flex items-center justify-center px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="space-y-8"
+          >
+            {/* Floating brand */}
+            <div className="flex justify-center mb-12">
+              <div className="flex items-center space-x-3 px-6 py-3 bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-gray-200/50">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
+                  <Brain className="w-5 h-5 text-white" />
+                </div>
+                <span
+                  className={`text-xl font-normal text-gray-900 ${instrumentSerif.className}`}
+                >
+                  LogSense
+                </span>
+              </div>
+            </div>
+
+            {/* Main heading with beautiful typography */}
+            <h1
+              className={`text-3xl lg:text-5xl font-normal text-gray-900 mb-6 leading-tight ${instrumentSerif.className}`}
+            >
+              Fix Production Issues
+              <br />
+              <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-transparent bg-clip-text italic">
+                Before Users Notice
+              </span>
+            </h1>
+
+            <p className="text-base lg:text-lg text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
+              LogSense uses advanced AI to analyze your microservices logs,
+              identify root causes, and suggest fixes in real-time. Reduce MTTR
+              by 70% with intelligent incident management.
+            </p>
+
+            {/* CTA buttons - updated for auth flow */}
+            <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-12">
+              <Link href="/sign-up">
+                <button className="px-8 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition flex items-center shadow-lg">
+                  Start Building Today
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </button>
+              </Link>
+              <Link href="/sign-in">
+                <button className="px-8 py-3 bg-white/90 backdrop-blur-md border border-gray-300 rounded-lg font-medium hover:bg-white transition flex items-center shadow-sm">
+                  <Play className="w-4 h-4 mr-2" />
+                  Watch Demo
+                </button>
+              </Link>
+            </div>
+          </motion.div>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Connection Status */}
-          <div className="flex items-center gap-2 text-xs">
-            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-300'}`} />
-            <span className="text-gray-500 mono">
-              {isConnected ? 'Connected' : 'Disconnected'}
-            </span>
+      </section>
+
+      <section className="relative px-6 py-16">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { label: "MTTR Reduction", value: "70%", icon: Timer },
+              { label: "Issues Analyzed", value: "1M+", icon: BarChart3 },
+              { label: "Active Teams", value: "500+", icon: Users },
+              { label: "Accuracy Rate", value: "95%", icon: TrendingUp },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="text-center p-6 bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200/50"
+              >
+                <stat.icon className="w-6 h-6 text-gray-600 mx-auto mb-3" />
+                <div className="text-2xl font-bold text-gray-900 mb-1">
+                  {stat.value}
+                </div>
+                <div className="text-sm text-gray-600">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section - modern cards */}
+      <section id="features" className="relative px-6 py-16">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Intelligent Features
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Everything you need to manage incidents like a pro
+            </p>
           </div>
 
-          {/* Clear Analysis Button */}
-          {(steps.length > 0 || result) && (
-            <button
-              onClick={clearAnalysis}
-              className="btn-secondary px-3 py-2 flex items-center gap-2 text-xs"
-            >
-              <RefreshCw className="h-3 w-3" />
-              Clear
-            </button>
-          )}
-
-          <button className="btn-secondary px-4 py-2 flex items-center gap-2 text-sm">
-            <Terminal className="h-4 w-4" />
-            Export Report
-          </button>
-          <button
-            onClick={handleStartAnalysis}
-            disabled={isAnalyzing || incidents.length === 0}
-            className="btn-gradient-blue px-4 py-2 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Zap className="h-4 w-4" />
-                Start AI Investigation
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <StatsCard key={stat.title} {...stat} />
-        ))}
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Incidents - Takes 2 columns */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Recent Incidents Card */}
-          <div className="card-elevated p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Recent Incidents
-                  </h2>
-                  <p className="text-xs text-gray-500 mono">
-                    Live from Sentry
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Brain,
+                title: "AI Root Cause Analysis",
+                description:
+                  "Advanced ML models analyze patterns across your entire stack to identify root causes instantly.",
+              },
+              {
+                icon: Zap,
+                title: "Real-Time Processing",
+                description:
+                  "WebSocket connections provide instant analysis as incidents occur, not minutes later.",
+              },
+              {
+                icon: GitBranch,
+                title: "Multi-Service Correlation",
+                description:
+                  "Automatically correlate issues across microservices to understand cascade failures.",
+              },
+              {
+                icon: Code2,
+                title: "Suggested Fixes",
+                description:
+                  "Get actionable code-level suggestions with confidence scores and implementation steps.",
+              },
+              {
+                icon: Layers,
+                title: "Knowledge Base",
+                description:
+                  "RAG-powered system learns from your past incidents to improve future analysis.",
+              },
+              {
+                icon: Cpu,
+                title: "MCP Integration",
+                description:
+                  "Native Model Context Protocol support for seamless tool orchestration.",
+              },
+            ].map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: i * 0.1 }}
+                className="group relative"
+              >
+                <div className="h-full bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200/50 p-6 hover:shadow-lg transition-all duration-300">
+                  <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center mb-4 group-hover:bg-gray-200 transition-colors">
+                    <feature.icon className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-3 text-gray-900">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {feature.description}
                   </p>
                 </div>
-              </div>
-              <button
-                onClick={fetchIncidents}
-                className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-            </div>
-            <div className="space-y-3">
-              {loading && (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                </div>
-              )}
-              {!loading && incidents.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No incidents found
-                </div>
-              )}
-              {!loading && incidents.slice(0, 5).map((incident) => (
-                <div
-                  key={incident.id}
-                  onClick={() => handleIncidentClick(incident)}
-                  className={`cursor-pointer transition-all duration-200 ${
-                    selectedIncident?.id === incident.id
-                      ? 'ring-2 ring-blue-500 ring-offset-2'
-                      : ''
-                  } ${isAnalyzing ? 'pointer-events-none opacity-50' : 'hover:scale-[1.02]'}`}
-                >
-                  <IncidentCard
-                    id={incident.id}
-                    title={incident.title}
-                    severity={mapSeverity(incident.level)}
-                    service={getServiceName(incident)}
-                    status={mapStatus(incident.status)}
-                    occurrences={incident.count}
-                    lastSeen={getTimeAgo(incident.last_seen)}
-                    aiConfidence={Math.random() * 0.3 + 0.7}
-                    affectedUsers={Math.floor(Math.random() * 1000)}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section id="pricing" className="relative px-6 py-16">
+        <div className="max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
+          >
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-12">
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                Ready to Transform Your Incident Management?
+              </h2>
+              <p className="text-lg text-gray-600 mb-8">
+                Start your free trial today. No credit card required.
+              </p>
+
+              <div className="max-w-md mx-auto mb-8">
+                <div className="flex space-x-3">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 transition"
                   />
+                  <button className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition">
+                    Get Started
+                  </button>
                 </div>
-              ))}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500">
+                <div className="flex items-center">
+                  <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
+                  Start for Free!
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative px-6 py-12 bg-gray-50/50">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-6 h-6 rounded bg-gray-900 flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-semibold text-gray-900">LogSense</span>
+            </div>
+            <div className="flex items-center space-x-6 text-sm text-gray-600">
+              <Link href="#" className="hover:text-gray-900 transition">
+                Privacy
+              </Link>
+              <Link href="#" className="hover:text-gray-900 transition">
+                Terms
+              </Link>
+              <Link href="#" className="hover:text-gray-900 transition">
+                Contact
+              </Link>
             </div>
           </div>
-
-          {/* System Health Chart */}
-          <SystemHealthChart />
-        </div>
-
-        {/* AI Activity Feed - Takes 1 column */}
-        <div className="lg:col-span-1">
-          <AIActivityFeed
-            steps={steps}
-            isAnalyzing={isAnalyzing}
-            error={analysisError}
-            result={result}
-          />
-        </div>
-      </div>
-
-      {/* System Overview Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Incident Status */}
-        <div className="card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <h3 className="font-semibold text-gray-900">
-              Incident Status
-            </h3>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Total Active
-              </span>
-              <span className="text-sm font-bold text-blue-600 mono">
-                {systemStats.totalIncidents}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Critical/Error
-              </span>
-              <span className="text-sm font-bold text-red-600 mono">
-                {systemStats.criticalIncidents}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Non-Critical
-              </span>
-              <span className="text-sm font-bold text-emerald-600 mono">
-                {systemStats.totalIncidents - systemStats.criticalIncidents}
-              </span>
-            </div>
+          <div className="mt-8 text-center text-sm text-gray-500">
+            © 2024 LogSense. Built with ❤️ for the AI Agent & Infrastructure
+            Engineer Internship
           </div>
         </div>
-
-        {/* Analysis Performance */}
-        <div className="card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Cpu className="h-5 w-5 text-purple-600" />
-            <h3 className="font-semibold text-gray-900">
-              Analysis Performance
-            </h3>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Avg Confidence
-              </span>
-              <span className="text-sm font-bold text-emerald-600 mono">
-                {systemStats.avgConfidence}%
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                High Confidence
-              </span>
-              <span className="text-sm font-bold text-blue-600 mono">
-                {systemStats.highConfidenceAnalyses}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Analyzed Today
-              </span>
-              <span className="text-sm font-bold text-purple-600 mono">
-                {systemStats.analysesToday}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* AI Insights */}
-        <div className="card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Zap className="h-5 w-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">
-              AI Knowledge
-            </h3>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Knowledge Base
-              </span>
-              <span className="text-sm font-bold text-emerald-600 mono">
-                {systemStats.knowledgeBaseSize} entries
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Confidence Rate
-              </span>
-              <span className="text-sm font-bold text-purple-600 mono">
-                {systemStats.knowledgeBaseSize > 0 ? Math.round((systemStats.highConfidenceAnalyses / systemStats.knowledgeBaseSize) * 100) : 0}%
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">
-                Status
-              </span>
-              <span className="text-sm font-bold text-blue-600 mono">
-                {systemStats.knowledgeBaseSize > 0 ? 'Learning' : 'Idle'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      </footer>
     </div>
-  )
+  );
 }

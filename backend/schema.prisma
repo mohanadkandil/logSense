@@ -11,8 +11,54 @@ datasource db {
   url      = "file:./dev.db"
 }
 
+// Multi-tenant models
+model User {
+  id              String   @id @default(cuid())
+  clerkUserId     String   @unique @map("clerk_user_id")
+  email           String   @unique
+  firstName       String?  @map("first_name")
+  lastName        String?  @map("last_name")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organizations   OrganizationMember[]
+
+  @@map("users")
+}
+
+model Organization {
+  id              String   @id @default(cuid())
+  clerkOrgId      String   @unique @map("clerk_org_id")
+  name            String
+  slug            String   @unique
+  imageUrl        String?  @map("image_url")
+  createdBy       String   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  members         OrganizationMember[]
+  analyses        Analysis[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  organizationId String   @map("organization_id")
+  role           String   // admin, member, viewer
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@map("organization_members")
+}
+
 model Analysis {
   id                String         @id @default(cuid())
+  organizationId    String?        @map("organization_id") // Made optional temporarily
   issueId           String         @map("issue_id")
   errorMessage      String         @map("error_message")
   rootCause         String?        @map("root_cause")
@@ -24,6 +70,7 @@ model Analysis {
   createdAt         DateTime       @default(now()) @map("created_at")
   updatedAt         DateTime       @updatedAt @map("updated_at")
 
+  organization      Organization?  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   steps             AnalysisStep[]
 
   @@map("analyses")
